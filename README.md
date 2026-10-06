@@ -33,19 +33,56 @@ agent-boardroom setup
 message to codex"** or **"tell claude to rerun the tests"** inside either agent. Needs Python 3.9+
 and [pipx](https://pipx.pypa.io/) (or `uv tool install`). macOS only for now.
 
-## What it looks like
+## Getting started
+
+There's nothing to "set up" between the agents: agent-boardroom finds sessions that are already
+running and delivers to them. So the first step is just having both agents open.
+
+**1. Start each agent as usual**, in its own terminal. Any directory; they don't need to share one.
 
 ```sh
-agent-boardroom list                                   # every live Claude Code and Codex session
-agent-boardroom send codex:7f3a "please review br_claude.py"
-agent-boardroom send claude:alpha - --wait responded <<'MSG'   # wait until the other agent responds
-Long multi-line message…
-MSG
-agent-boardroom reply 9c1e2b40 - <<'MSG'               # answer a message by its msg-id
-Looks good.
-MSG
-agent-boardroom log --follow                           # watch the conversation
+claude      # terminal 1
+codex       # terminal 2
 ```
+
+Sessions started *before* you ran `agent-boardroom setup` won't have the skill loaded; start fresh
+ones.
+
+**2. Ask either agent to talk to the other**, in plain language, inside that agent's prompt:
+
+> send a message to codex asking it to review the tests in `src/engine/`
+
+The agent runs `agent-boardroom list`, picks the Codex session, and sends. If more than one session
+could match, it should ask you which, not guess. The other agent sees the message arrive, marked as
+coming from a peer session, and its skill tells it how to answer. From then on, replies route back
+and forth by session ID.
+
+**3. Check on it when you want to.** In either terminal, or your own shell:
+
+```sh
+agent-boardroom list            # who's running right now (* marks the session you're in)
+agent-boardroom log --follow    # watch the conversation as it happens
+agent-boardroom receipt <id>    # did a specific message reach the other agent's history?
+agent-boardroom doctor          # if anything seems off: read-only health check
+```
+
+**Tips**
+
+- **Name your sessions** so they're easy to pick out: `agent-boardroom name backend-work`. Names
+  are for you; routing always uses the session ID underneath.
+- **Agents can be busy.** A message to a session that's mid-task is queued and picked up at its
+  next step. A session running with `--dangerously-skip-permissions` holds peer messages for your
+  approval instead.
+- **You can send by hand too**, without going through an agent:
+  ```sh
+  agent-boardroom send codex:7f3a "please review br_claude.py"
+  agent-boardroom send claude:alpha - --wait responded <<'MSG'   # wait until the other agent responds
+  Long multi-line message…
+  MSG
+  agent-boardroom reply 9c1e2b40 - <<'MSG'                       # answer a message by its msg-id
+  Looks good.
+  MSG
+  ```
 
 ## Why you'd want it
 
