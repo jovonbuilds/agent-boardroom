@@ -1,24 +1,10 @@
 # agent-boardroom
 
+**Let your Claude Code and Codex sessions talk to each other.** One command lets any agent session
+on your Mac message another one, get a reply back to the right session, and check that a message
+arrived. No server to run, no wrapper to launch the agents through, no dependencies.
+
 ```text
-   ░███                                        ░██
-  ░██░██                                       ░██
- ░██  ░██   ░████████  ░███████  ░████████  ░████████
-░█████████ ░██    ░██ ░██    ░██ ░██    ░██    ░██
-░██    ░██ ░██    ░██ ░█████████ ░██    ░██    ░██
-░██    ░██ ░██   ░███ ░██        ░██    ░██    ░██
-░██    ░██  ░█████░██  ░███████  ░██    ░██     ░████
-                  ░██
-            ░███████
-
-░████████                                         ░██
-░██    ░██                                        ░██
-░██    ░██   ░███████   ░██████   ░██░████  ░████████ ░██░████  ░███████   ░███████  ░█████████████
-░████████   ░██    ░██       ░██  ░███     ░██    ░██ ░███     ░██    ░██ ░██    ░██ ░██   ░██   ░██
-░██     ░██ ░██    ░██  ░███████  ░██      ░██    ░██ ░██      ░██    ░██ ░██    ░██ ░██   ░██   ░██
-░██     ░██ ░██    ░██ ░██   ░██  ░██      ░██   ░███ ░██      ░██    ░██ ░██    ░██ ░██   ░██   ░██
-░█████████   ░███████   ░█████░██ ░██       ░█████░██ ░██       ░███████   ░███████  ░██   ░██   ░██
-
  ██╗  ██╗            ██████╗
  ╚██╗██╔╝   ◄────►  ██╔════╝
   ╚███╔╝    ◄────►  ██║
@@ -28,15 +14,23 @@
    Codex    boardroom  Claude
 ```
 
-Message between **Claude Code** and **Codex** sessions running on the same machine. Every message
-is routed by the recipient's exact session ID; if that can't be resolved unambiguously, it's
-refused rather than guessed. You can also check whether a message reached the other agent's
-history, without needing a reply.
+## Install (two commands)
+
+```sh
+pipx install git+https://github.com/jovonbuilds/agent-boardroom@v0.4.0
+agent-boardroom setup
+```
+
+`setup` installs a skill into each agent it finds, so from then on you can just say **"send a
+message to codex"** or **"tell claude to rerun the tests"** inside either agent. Needs Python 3.9+
+and [pipx](https://pipx.pypa.io/) (or `uv tool install`). macOS only for now.
+
+## What it looks like
 
 ```sh
 agent-boardroom list                                   # every live Claude Code and Codex session
 agent-boardroom send codex:7f3a "please review br_claude.py"
-agent-boardroom send claude:alpha - --wait responded <<'MSG'
+agent-boardroom send claude:alpha - --wait responded <<'MSG'   # wait until the other agent responds
 Long multi-line message…
 MSG
 agent-boardroom reply 9c1e2b40 - <<'MSG'               # answer a message by its msg-id
@@ -45,45 +39,43 @@ MSG
 agent-boardroom log --follow                           # watch the conversation
 ```
 
-It's a single Python 3 command with **no dependencies** beyond the standard library.
+## Why you'd want it
 
-> **Unofficial.** agent-boardroom isn't affiliated with or endorsed by Anthropic or OpenAI.
-> - **Claude Code side:** uses Claude Code's **private, undocumented** local session registry,
->   socket and transcript format.
-> - **Codex side:** uses the Codex app-server's documented control socket with **experimental**
->   queue and history endpoints.
->
-> Either can change in any release. Tested with **Claude Code 2.1.290** and **Codex CLI 0.160.1**
-> on **macOS**. Run `agent-boardroom doctor` after upgrading either one.
+When you run several coding agents side by side, say a Claude Code session in one terminal and a
+Codex session in another, they can't talk. agent-boardroom gives them a shared channel:
 
-## Why
+- **Replies land in the right place.** Every message carries the sender's exact session ID, so the
+  receiver answers the session that asked, not a lookalike. Ambiguous recipients are refused.
+- **You can tell if it arrived.** `--wait` or `receipt` reads the receiver's own history for the
+  message: `recorded`, `responded`, or (Codex) `turn_completed`. No reply required.
+- **It never makes things worse.** No automatic retries (so an agent can't be made to act twice),
+  loop and flood guards, and a message from another agent is always presented as information,
+  never as your instructions.
 
-When you run several coding agents side by side (a Claude Code session in one terminal, a Codex
-session in another), they can't talk to each other. agent-boardroom lets one agent message another
-from its shell:
-- **Replies go to the right session:** each message carries the sender's session address, so the
-  receiver can answer the exact session that sent it.
-- **Every send is logged.**
-- **You can check delivery:** whether a message reached the other agent's history.
+> **Unofficial, and built on undocumented internals.** Not affiliated with Anthropic or OpenAI.
+> The Claude Code side uses Claude Code's private local session registry, socket and transcript
+> format; the Codex side uses the app-server's experimental queue and history endpoints. Either
+> can change in any release. Tested with **Claude Code 2.1.290** and **Codex CLI 0.160.1**. Run
+> `agent-boardroom doctor` after upgrading either.
+
+---
+
+<details>
+<summary><b>Everything else</b>: requirements, how install and the skills work, commands, exit codes, receipts, safety, configuration, limitations</summary>
 
 ## Requirements
 
-- Python 3.9+ (standard library only)
+- Python 3.9+ (standard library only at runtime)
 - macOS (tested). Linux is likely to work but is untested. Windows isn't supported.
 - **Claude Code:** interactive sessions on the same machine and user account.
 - **Codex:** a running Codex app-server with a compatible Unix control socket (by default
   `$CODEX_HOME/app-server-control/app-server-control.sock`), and the target thread **loaded** in it.
   Installing the CLI alone isn't enough. agent-boardroom never starts a server or resumes a thread.
 
-## Install
+## How install works
 
-**Requires:** Python 3.9+ at runtime (standard library only). Installing needs
-[pipx](https://pipx.pypa.io/) (or `uv tool`), which builds the package with setuptools.
-
-```sh
-pipx install git+https://github.com/jovonbuilds/agent-boardroom@v0.4.0
-agent-boardroom setup
-```
+`pipx install` builds the package with setuptools and puts the command on your PATH in its own
+environment; `uv tool install` does the same. Runtime is standard library only.
 
 - **`pipx install`** puts the `agent-boardroom` command on your PATH in its own environment.
   (`uv tool install git+https://github.com/jovonbuilds/agent-boardroom@v0.4.0` works the same way.)
@@ -264,6 +256,8 @@ install, upgrade and uninstall against temporary skill directories) from outside
 
 The tests need no live sessions: they use temporary Unix sockets, a fake session registry and a
 fake Codex app-server.
+
+</details>
 
 ## Credits
 
