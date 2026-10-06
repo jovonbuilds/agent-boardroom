@@ -66,6 +66,8 @@ agent-boardroom receipt <id>    # did a specific message reach the other agent's
 agent-boardroom doctor          # if anything seems off: read-only health check
 ```
 
+If something doesn't work, see [Troubleshooting](#troubleshooting).
+
 **Tips**
 
 - **Name your sessions** so they're easy to pick out: `agent-boardroom name backend-work`. Names
@@ -106,7 +108,7 @@ Codex session in another, they can't talk. agent-boardroom gives them a shared c
 ---
 
 <details>
-<summary><b>Everything else</b>: requirements, how install and the skills work, commands, exit codes, receipts, safety, configuration, limitations</summary>
+<summary><b>Everything else</b>: requirements, how install and the skills work, commands, exit codes, receipts, safety, configuration, limitations, troubleshooting</summary>
 
 ## Requirements
 
@@ -288,6 +290,32 @@ the matched Codex turn is listed `failed`:
   unambiguous.
 
 See [docs/DESIGN.md](docs/DESIGN.md) for how it works and why it's built this way.
+
+## Troubleshooting
+
+Start with `agent-boardroom doctor`. It's read-only and checks everything below in one pass.
+
+| You see | What it means | What to do |
+|---|---|---|
+| The agent says it doesn't know about agent-boardroom, or ignores "send a message to codex" | The session started before `setup` installed the skill, or the skill dir is missing | Start a fresh session. `doctor` shows the skill as `current`, `missing` or `outdated`; run `agent-boardroom setup` if it isn't current. |
+| `no session matches 'codex:…'` | No live session matches that ID or name | `agent-boardroom list` to see what's running. For Codex, the thread must be open in a running app-server. |
+| `ambiguous '…'; candidates: …` | Several sessions match a prefix or name | Use more of the ID, or name your sessions (`agent-boardroom name …`) so they're distinct. |
+| `codex backend unavailable (… No such file or directory)` | No Codex app-server is running, or `AGENT_BOARDROOM_CODEX_SOCKET` points at the wrong socket | Start Codex (it starts the app-server). Check the path `doctor` prints under `codex.socket`. |
+| `Codex thread … is not loaded` | The thread exists but isn't open in the app-server | Open it in Codex, then retry. agent-boardroom never resumes threads for you. |
+| `more than one agent identity is advertised … pass --as` | You're in a shell launched by one agent from inside another (both `CLAUDE_CODE_SESSION_ID` and `CODEX_THREAD_ID` are set) | Add `--as claude` or `--as codex` to say which one you are. |
+| `… identity that doesn't verify` / `CLAUDE_CODE_SESSION_ID=… has no live registry entry` | The shell inherited a session ID from a session that has since exited | Run from a live agent session, or from a plain terminal (sends then come from `terminal:…`). |
+| `… is live 2 times; refusing to guess` | The same Claude session ID is running in two processes (a conversation resumed twice) | Close one of them. `--as` can't resolve this; it only picks a backend. |
+| `reply depth … exceeds the cap` / `rate limit` / `identical message … within 10 s` | A loop or flood guard fired | Usually the agents are ping-ponging. If the exchange is genuinely wanted, re-run with `--no-guard depth` (or `rate` / `dup`), only for the guard that fired. |
+| `serialized message is … UTF-16 units; Claude's inbox drops anything over …` | The message is too large for Claude Code's socket | Put the content in a file and send its path. |
+| Exit 2, `delivery unknown … Do NOT resend blindly` | The request was written but no definite answer came back; it may have arrived | `agent-boardroom receipt <msg-id>` to check the receiver's history. Don't resend until you know. |
+| Exit 4, `receipt … not established` | The other agent hasn't recorded or responded to it yet | It may still read it later. If the Claude target runs with `--dangerously-skip-permissions`, the message is probably waiting for its user's approval (the message says so). Don't resend. |
+| `--wait responded` always times out on a Claude session that clearly answered | It was busy when the message arrived; receipts for busy deliveries need the history to be unambiguous | `agent-boardroom receipt <msg-id>` will usually still show `recorded`. See Limitations. |
+| `setup` says `refused (locally changed: SKILL.md …)` | You edited an installed skill, and setup won't overwrite your edits | Keep your version, or `agent-boardroom setup --force` to replace it (a backup is kept beside it). |
+| `setup` says `skipped (exists without an agent-boardroom manifest …)` | A skill dir is there that setup didn't install (a manual copy or symlink) | Leave it, or `agent-boardroom setup --adopt` to let setup manage it (replaced files are backed up). A symlink is only reported; remove it by hand first. |
+| `doctor` warns `installed 2.1.xxx; the private protocol was verified only against 2.1.290` | Claude Code has updated past the tested version | Expected after any update. Send a test message; if it works, carry on. If not, open an issue with the version. |
+| `doctor` warns `codex.running_version: unknown` | The app-server doesn't report its version | Always shown; it's informational, not a fault. |
+
+If none of these match, run `agent-boardroom doctor --json` and include its output in an issue.
 
 ## Tests
 
