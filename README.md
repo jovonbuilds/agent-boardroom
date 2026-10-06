@@ -1,4 +1,12 @@
-# agent-boardroom
+```text
+▄████▄  ▄▄▄▄ ▄▄▄▄▄ ▄▄  ▄▄ ▄▄▄▄▄▄
+██▄▄██ ██ ▄▄ ██▄▄  ███▄██   ██
+██  ██ ▀███▀ ██▄▄▄ ██ ▀██   ██
+
+█████▄  ▄▄▄   ▄▄▄  ▄▄▄▄  ▄▄▄▄  ▄▄▄▄   ▄▄▄   ▄▄▄  ▄▄   ▄▄
+██▄▄██ ██▀██ ██▀██ ██▄█▄ ██▀██ ██▄█▄ ██▀██ ██▀██ ██▀▄▀██
+██▄▄█▀ ▀███▀ ██▀██ ██ ██ ████▀ ██ ██ ▀███▀ ▀███▀ ██   ██
+```
 
 **Let your Claude Code and Codex sessions talk to each other.** One command lets any agent session
 on your Mac message another one, get a reply back to the right session, and check that a message
