@@ -1,0 +1,42 @@
+[build-system]
+# setuptools 61+ reads [project] tables; this floor still supports Python 3.9.
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-boardroom"
+dynamic = ["version"]
+description = "Message between Claude Code and Codex sessions on the same machine, with receipts."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+authors = [{ name = "jovonbuilds" }]
+keywords = ["claude-code", "codex", "agents", "messaging", "cli"]
+classifiers = [
+  "Environment :: Console",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: MacOS",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Software Development",
+]
+# Runtime is standard-library only. Building/installing needs setuptools (via pip/pipx/uv).
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/jovonbuilds/agent-boardroom"
+Issues = "https://github.com/jovonbuilds/agent-boardroom/issues"
+
+[project.scripts]
+agent-boardroom = "agent_boardroom.cli:main"
+
+[tool.setuptools]
+packages = ["agent_boardroom"]
+include-package-data = true
+
+[tool.setuptools.dynamic]
+version = { attr = "agent_boardroom.__version__" }
+
+[tool.setuptools.package-data]
+# the bundled skills: one canonical copy each, read at runtime through importlib.resources
+agent_boardroom = ["skills/*/agent-boardroom/SKILL.md"]

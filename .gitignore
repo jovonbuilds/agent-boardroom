@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.DS_Store
+# local state never belongs in the repo
+log.jsonl
+*.bak*
